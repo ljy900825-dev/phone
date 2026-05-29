@@ -26,13 +26,19 @@ if [ "$(uname)" = "Darwin" ]; then
   exit 1
 fi
 
+# apt 가 중간에 대화창(needrestart/debconf)을 띄우지 않도록 비대화형으로 강제.
+# (curl|bash 로 실행하면 이 창이 키보드 입력을 못 받아 멈추기 때문)
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+
 echo "==> [1/4] Node.js / git 확인"
 if ! command -v node >/dev/null 2>&1; then
   echo "    Node.js 설치 중..."
   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-  sudo apt-get install -y nodejs
+  sudo -E apt-get install -y nodejs
 fi
-command -v git >/dev/null 2>&1 || sudo apt-get install -y git
+command -v git >/dev/null 2>&1 || sudo -E apt-get install -y git
 echo "    node $(node -v) / npm $(npm -v)"
 
 echo "==> [2/4] 저장소 받기 ($BRANCH)"
