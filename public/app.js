@@ -7,6 +7,7 @@ const CSRF_HEADER = 'X-Phone-Exif-Editor';
 
 let selectedFile = null;
 let selectedBase64 = null;
+let lastObjectUrl = null; // 다운로드용 Blob URL (재생성 시 해제)
 
 // 지도(GPS) 상태
 let map = null;
@@ -277,13 +278,28 @@ function renderResult(data) {
     tbody.appendChild(tr);
   }
 
-  // 다운로드 링크 (data URL)
+  // 다운로드 링크 — iOS 사파리는 큰 data: URL 다운로드 시 멈추므로 Blob URL 사용
   const link = $('downloadLink');
-  link.href = 'data:image/jpeg;base64,' + data.resultBase64;
+  const blob = base64ToBlob(data.resultBase64, 'image/jpeg');
+  if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+  lastObjectUrl = URL.createObjectURL(blob);
+  link.href = lastObjectUrl;
   link.download = data.outputFile;
-  $('savedPath').textContent = `서버에도 저장됨: output/${data.outputFile}`;
+  // 서버 저장 안내는 실제 저장된 경우(로컬 모드)에만
+  $('savedPath').textContent = data.persisted
+    ? `서버에도 저장됨: output/${data.outputFile}`
+    : '아이폰: 안 받아지면 버튼을 길게 눌러 “이미지 저장” 또는 새 탭에서 길게 눌러 “사진에 추가”';
 
   $('resultCard').scrollIntoView({ behavior: 'smooth' });
+}
+
+// base64 → Blob (큰 문자열도 청크로 안전하게 변환)
+function base64ToBlob(b64, type) {
+  const bin = atob(b64);
+  const len = bin.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
 }
 
 function fmt(v) {
