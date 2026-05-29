@@ -132,4 +132,21 @@ td.changed { color: var(--good); }
   text-decoration: none;
 }
 
+/* 지도(GPS) */
+#mapBox { margin-top: 12px; }
+#map {
+  height: 300px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 8px;
+  z-index: 0;
+}
+.leaflet-container { background: #0f1115; }
+button.mini {
+  width: auto;
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 8px 16px;
+}
+
 .hidden { display: none; }

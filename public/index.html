@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>폰 사진 EXIF 편집기 (로컬 전용)</title>
+    <title>폰 사진 EXIF 편집기</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
@@ -40,12 +46,16 @@
         <!-- GPS -->
         <fieldset>
           <legend>② GPS 위치</legend>
-          <label><input type="radio" name="gpsMode" value="keep" checked /> 그대로</label>
-          <label><input type="radio" name="gpsMode" value="set" /> 좌표 설정</label>
-          <label><input type="radio" name="gpsMode" value="remove" /> 제거</label>
-          <div class="row">
-            <input type="number" id="gpsLat" step="any" placeholder="위도 (예: 37.5665)" disabled />
-            <input type="number" id="gpsLon" step="any" placeholder="경도 (예: 126.9780)" disabled />
+          <label><input type="radio" name="gpsMode" value="map" checked /> 지도에서 찾기</label>
+          <label><input type="radio" name="gpsMode" value="remove" /> 지우기</label>
+
+          <div id="mapBox">
+            <div class="row">
+              <input type="text" id="placeSearch" placeholder="장소 검색 (예: 강남역, 부산 해운대)" />
+              <button type="button" id="searchBtn" class="mini">검색</button>
+            </div>
+            <div id="map"></div>
+            <p class="hint" id="pickedCoord">지도를 탭하거나 장소를 검색해 위치를 선택하세요.</p>
           </div>
         </fieldset>
 
@@ -84,6 +94,11 @@
       </section>
     </main>
 
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
     <script src="/app.js"></script>
   </body>
 </html>

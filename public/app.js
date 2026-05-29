@@ -8,6 +8,12 @@ const CSRF_HEADER = 'X-Phone-Exif-Editor';
 let selectedFile = null;
 let selectedBase64 = null;
 
+// 지도(GPS) 상태
+let map = null;
+let marker = null;
+let pickedLat = null;
+let pickedLon = null;
+
 // 진단/표시할 EXIF 요약 항목 (서버 summarize 와 동일 키)
 const FIELDS = [
   'Make', 'Model', 'Software', 'LensMake', 'LensModel',
@@ -23,16 +29,83 @@ async function loadProfiles() {
     const { profiles } = await res.json();
     const sel = $('devProfile');
     sel.innerHTML = '';
-    for (const p of profiles) {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = `${p.label} (${p.vendor})`;
-      sel.appendChild(opt);
+    // 제조사별로 그룹(optgroup) 지어 표시
+    const groups = { samsung: '삼성 갤럭시', apple: '애플 아이폰' };
+    for (const [vendor, label] of Object.entries(groups)) {
+      const list = profiles.filter((p) => p.vendor === vendor);
+      if (!list.length) continue;
+      const og = document.createElement('optgroup');
+      og.label = label;
+      for (const p of list) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.label;
+        og.appendChild(opt);
+      }
+      sel.appendChild(og);
     }
   } catch (e) {
     setStatus('기기 프로파일 로드 실패: ' + e.message, 'err');
   }
 }
+
+// --- 지도(GPS) ---
+function ensureMap() {
+  if (map || typeof L === 'undefined') return;
+  // 기본 중심: 서울시청
+  map = L.map('map').setView([37.5665, 126.978], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap',
+  }).addTo(map);
+  map.on('click', (e) => setPicked(e.latlng.lat, e.latlng.lng));
+  // 표시 영역이 늦게 잡히는 모바일 대응
+  setTimeout(() => map.invalidateSize(), 200);
+}
+
+function setPicked(lat, lon) {
+  pickedLat = lat;
+  pickedLon = lon;
+  if (!marker) {
+    marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+    marker.on('dragend', () => {
+      const p = marker.getLatLng();
+      pickedLat = p.lat;
+      pickedLon = p.lng;
+      $('pickedCoord').textContent = `선택됨: ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`;
+    });
+  } else {
+    marker.setLatLng([lat, lon]);
+  }
+  $('pickedCoord').textContent = `선택됨: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+
+async function searchPlace() {
+  const q = $('placeSearch').value.trim();
+  if (!q) return;
+  $('pickedCoord').textContent = '검색 중…';
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' +
+      encodeURIComponent(q);
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    const data = await res.json();
+    if (!data.length) {
+      $('pickedCoord').textContent = '검색 결과가 없습니다. 지도를 직접 탭해보세요.';
+      return;
+    }
+    const lat = parseFloat(data[0].lat);
+    const lon = parseFloat(data[0].lon);
+    map.setView([lat, lon], 15);
+    setPicked(lat, lon);
+  } catch {
+    $('pickedCoord').textContent = '검색 실패(네트워크). 지도를 직접 탭해보세요.';
+  }
+}
+
+$('searchBtn').addEventListener('click', searchPlace);
+$('placeSearch').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); searchPlace(); }
+});
 
 // --- 파일 선택 ---
 $('fileInput').addEventListener('change', (ev) => {
@@ -66,8 +139,9 @@ function syncEnabled() {
   $('dtOffset').disabled = dt === 'none';
 
   const gps = radioValue('gpsMode');
-  $('gpsLat').disabled = gps !== 'set';
-  $('gpsLon').disabled = gps !== 'set';
+  // 지도 박스는 "지도에서 찾기"일 때만 표시
+  $('mapBox').style.display = gps === 'map' ? '' : 'none';
+  if (gps === 'map') ensureMap();
 
   const dev = radioValue('devMode');
   $('devProfile').disabled = dev !== 'apply';
@@ -130,16 +204,14 @@ function buildOptions() {
 
   // ② GPS
   const gpsMode = radioValue('gpsMode');
-  if (gpsMode === 'set') {
-    const lat = parseFloat($('gpsLat').value);
-    const lon = parseFloat($('gpsLon').value);
-    if (!isFinite(lat) || !isFinite(lon)) {
-      setStatus('GPS 위도/경도를 입력하세요.', 'err');
+  if (gpsMode === 'map') {
+    if (pickedLat == null || pickedLon == null) {
+      setStatus('지도에서 위치를 선택하거나, GPS를 "지우기"로 바꾸세요.', 'err');
       return null;
     }
-    opts.gps = { mode: 'set', lat, lon };
+    opts.gps = { mode: 'set', lat: pickedLat, lon: pickedLon };
   } else {
-    opts.gps = { mode: gpsMode }; // keep | remove
+    opts.gps = { mode: 'remove' };
   }
 
   // ③ 기기 프로파일
