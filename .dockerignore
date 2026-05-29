@@ -1,0 +1,6 @@
+node_modules
+output
+fixtures
+*.log
+.git
+.gitignore

@@ -1,11 +1,13 @@
-// 로컬 전용 EXIF 편집 대시보드 서버.
-// Node 내장 http 모듈만 사용. 외부 프레임워크 없음.
+// EXIF 편집 대시보드 서버. Node 내장 http 모듈만 사용 (외부 프레임워크 없음).
 //
-// 안전조건 (로컬 전용):
-//   - 127.0.0.1 에만 바인딩
-//   - Host 헤더 검증 (localhost/127.0.0.1 + 지정 포트만 허용)
-//   - 상태변경(POST) 요청에 커스텀 헤더 강제 (간단 CSRF 방어)
-// 자동 업로드/발행 기능은 제공하지 않는다. EXIF 편집 + 결과 저장/다운로드까지만.
+// 두 가지 모드:
+//   1) 로컬 모드 (기본): 127.0.0.1 바인딩 + Host 검증 + 편집본 디스크 저장(output/)
+//   2) 공개 모드 (PUBLIC=1): 링크로 공유해 누구나 사용. 아래가 달라진다.
+//        - 0.0.0.0 바인딩 (플랫폼 도메인에서 접근)
+//        - Host 검증 완화 (ALLOWED_HOSTS 로 지정하지 않으면 허용)
+//        - 업로드 사진을 서버에 저장하지 않음 (프라이버시) → 결과는 다운로드로만 반환
+// 공통: 상태변경(POST) 요청에 커스텀 헤더 강제 (간단 CSRF 방어).
+// 자동 업로드/발행 기능은 어느 모드에서도 제공하지 않는다.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,11 +20,22 @@ const ROOT = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const OUTPUT_DIR = path.join(ROOT, 'output');
 
-const HOST = '127.0.0.1';
+// --- 환경설정 ---
+const PUBLIC_MODE = process.env.PUBLIC === '1';
 const PORT = Number(process.env.PORT) || 5173;
+// 공개 모드는 기본 0.0.0.0(플랫폼이 외부 노출), 로컬 모드는 127.0.0.1.
+const HOST = process.env.HOST || (PUBLIC_MODE ? '0.0.0.0' : '127.0.0.1');
 const MAX_BODY = 60 * 1024 * 1024; // 60MB
 const CSRF_HEADER = 'x-phone-exif-editor'; // POST 시 필수
-const ALLOWED_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
+// 디스크 저장 여부: 공개 모드는 기본 미저장. PERSIST_OUTPUT=1 로 강제 가능.
+const PERSIST_OUTPUT = process.env.PERSIST_OUTPUT === '1' || !PUBLIC_MODE;
+// Host 허용 목록: ALLOWED_HOSTS 환경변수(콤마구분)가 있으면 그것만 허용.
+// 없으면 로컬 모드는 127.0.0.1/localhost 만, 공개 모드는 전체 허용.
+const ALLOWED_HOSTS = process.env.ALLOWED_HOSTS
+  ? new Set(process.env.ALLOWED_HOSTS.split(',').map((h) => h.trim()))
+  : PUBLIC_MODE
+    ? null // null = 모든 Host 허용
+    : new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -31,15 +44,20 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
 };
 
-fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+if (PERSIST_OUTPUT) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
 const server = http.createServer((req, res) => {
-  // --- Host 헤더 검증 ---
-  if (!ALLOWED_HOSTS.has(req.headers.host)) {
-    return send(res, 403, { error: 'Host 헤더가 허용되지 않았습니다 (로컬 전용).' });
+  // --- Host 헤더 검증 (ALLOWED_HOSTS 가 null 이면 생략) ---
+  if (ALLOWED_HOSTS && !ALLOWED_HOSTS.has(req.headers.host)) {
+    return send(res, 403, { error: 'Host 헤더가 허용되지 않았습니다.' });
   }
 
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+  // 헬스체크 (배포 플랫폼용)
+  if (req.method === 'GET' && url.pathname === '/healthz') {
+    return send(res, 200, { ok: true, mode: PUBLIC_MODE ? 'public' : 'local' });
+  }
 
   if (req.method === 'GET' && url.pathname === '/api/profiles') {
     return send(res, 200, { profiles: listProfiles() });
@@ -90,10 +108,14 @@ function handleEdit(req, res) {
         return send(res, 400, { error: e.message });
       }
 
-      // output/ 에 편집본 저장 (원본은 건드리지 않음)
+      // 편집본 처리 (원본은 건드리지 않음).
+      // 로컬 모드: output/ 에 저장. 공개 모드: 저장하지 않고 다운로드용 base64 만 반환.
       const outName = makeOutputName(filename);
-      const outPath = path.join(OUTPUT_DIR, outName);
-      fs.writeFileSync(outPath, result.outBuffer);
+      let outPath = null;
+      if (PERSIST_OUTPUT) {
+        outPath = path.join(OUTPUT_DIR, outName);
+        fs.writeFileSync(outPath, result.outBuffer);
+      }
 
       send(res, 200, {
         ok: true,
@@ -101,7 +123,8 @@ function handleEdit(req, res) {
         before: result.before,
         after: result.after,
         outputFile: outName,
-        outputPath: outPath,
+        outputPath: outPath, // 공개 모드에서는 null
+        persisted: PERSIST_OUTPUT,
         resultBase64: result.outBuffer.toString('base64'),
       });
     })
@@ -163,7 +186,13 @@ function send(res, status, obj) {
 }
 
 server.listen(PORT, HOST, () => {
-  console.log(`\n📷 phone EXIF editor 대시보드 실행 중`);
+  console.log(`\n📷 phone EXIF editor 대시보드 실행 중 [${PUBLIC_MODE ? '공개' : '로컬'} 모드]`);
   console.log(`   → http://${HOST}:${PORT}`);
-  console.log(`   (Ctrl+C 로 종료 · 편집본은 output/ 에 저장됩니다)\n`);
+  if (PUBLIC_MODE) {
+    console.log(`   공개 모드: 0.0.0.0 바인딩, 업로드 사진 ${PERSIST_OUTPUT ? 'output/ 에 저장' : '미저장(다운로드만)'}`);
+    if (!ALLOWED_HOSTS) console.log(`   ⚠️  Host 검증 비활성 · 인증 없음 — 신뢰할 수 있는 사람과만 링크 공유하세요.`);
+  } else {
+    console.log(`   (Ctrl+C 로 종료 · 편집본은 output/ 에 저장됩니다)`);
+  }
+  console.log('');
 });

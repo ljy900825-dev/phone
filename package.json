@@ -1,10 +1,14 @@
 {
   "name": "phone-exif-editor",
   "version": "1.0.0",
-  "description": "폰(갤럭시/아이폰) JPEG 사진의 EXIF 메타데이터를 편집하는 로컬 전용 도구",
+  "description": "폰(갤럭시/아이폰) JPEG 사진의 EXIF 메타데이터를 편집하는 도구 (로컬/공개 모드)",
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node scripts/server.js",
+    "start:public": "PUBLIC=1 node scripts/server.js",
     "verify": "node scripts/verify-piexif.js"
   },
   "license": "MIT",
