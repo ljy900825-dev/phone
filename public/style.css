@@ -1,0 +1,152 @@
+:root {
+  --bg: #0f1115;
+  --card: #1a1d24;
+  --border: #2a2e38;
+  --text: #e6e8ec;
+  --muted: #9aa0ab;
+  --accent: #4f8cff;
+  --accent-hover: #3a7af0;
+  --good: #3ddc84;
+  --warn: #ffb454;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo",
+    "Noto Sans KR", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+header {
+  padding: 24px 20px 8px;
+  text-align: center;
+}
+header h1 { margin: 0; font-size: 1.6rem; }
+header .sub { color: var(--muted); margin: 6px 0 0; font-size: 0.9rem; }
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.card h2 { margin: 0 0 14px; font-size: 1.1rem; }
+
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+}
+legend { padding: 0 6px; color: var(--accent); font-weight: 600; font-size: 0.95rem; }
+
+label { display: inline-flex; align-items: center; gap: 5px; margin-right: 14px; cursor: pointer; }
+
+.row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+
+input[type="text"], input[type="number"], input[type="datetime-local"], select {
+  background: #0f1115;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.92rem;
+  flex: 1 1 160px;
+}
+input:disabled, select:disabled { opacity: 0.4; }
+
+input[type="file"] {
+  width: 100%;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: #0f1115;
+  color: var(--text);
+}
+
+button {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--accent-hover); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.hint { color: var(--muted); font-size: 0.82rem; margin: 8px 0 0; }
+.file-info { margin-top: 12px; padding: 10px 12px; background: #0f1115; border-radius: 8px; font-size: 0.88rem; }
+.status { margin-top: 10px; font-size: 0.9rem; min-height: 1.2em; }
+.status.err { color: var(--warn); }
+.status.ok { color: var(--good); }
+
+.actions {
+  margin-bottom: 14px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.actions ul { margin: 6px 0 0; padding-left: 18px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+th, td {
+  text-align: left;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  word-break: break-all;
+}
+th { color: var(--muted); font-weight: 600; }
+td.changed { color: var(--good); }
+.null { color: #5b606b; font-style: italic; }
+
+.download {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 18px;
+  background: var(--good);
+  color: #08130c;
+  font-weight: 700;
+  border-radius: 10px;
+  text-decoration: none;
+}
+
+/* 지도(GPS) */
+#mapBox { margin-top: 12px; }
+#map {
+  height: 300px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 8px;
+  z-index: 0;
+}
+.leaflet-container { background: #0f1115; }
+button.mini {
+  width: auto;
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 8px 16px;
+}
+
+.hidden { display: none; }
