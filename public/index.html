@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>폰 사진 EXIF 편집기 (로컬 전용)</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>📷 폰 사진 EXIF 편집기</h1>
+      <p class="sub">갤럭시 / 아이폰 JPEG 사진의 메타데이터를 정리합니다 · 로컬 전용 · 자동 업로드 없음</p>
+    </header>
+
+    <main>
+      <!-- 1. 파일 선택 -->
+      <section class="card">
+        <h2>1. 사진 선택</h2>
+        <input type="file" id="fileInput" accept="image/jpeg,.jpg,.jpeg" />
+        <p class="hint">폰으로 찍은 실제 <strong>JPEG</strong> 사진만 지원합니다 (PNG 미지원).</p>
+        <div id="fileInfo" class="file-info hidden"></div>
+      </section>
+
+      <!-- 2. 편집 옵션 -->
+      <section class="card">
+        <h2>2. 편집 옵션</h2>
+
+        <!-- 촬영일시 -->
+        <fieldset>
+          <legend>① 촬영일시</legend>
+          <label><input type="radio" name="dtMode" value="none" checked /> 변경 안 함</label>
+          <label><input type="radio" name="dtMode" value="custom" /> 지정</label>
+          <label><input type="radio" name="dtMode" value="randomRecent" /> 최근 랜덤(14일 내)</label>
+          <div class="row">
+            <input type="datetime-local" id="dtValue" disabled />
+            <input type="text" id="dtOffset" value="+09:00" placeholder="오프셋 +09:00" size="8" disabled />
+          </div>
+        </fieldset>
+
+        <!-- GPS -->
+        <fieldset>
+          <legend>② GPS 위치</legend>
+          <label><input type="radio" name="gpsMode" value="keep" checked /> 그대로</label>
+          <label><input type="radio" name="gpsMode" value="set" /> 좌표 설정</label>
+          <label><input type="radio" name="gpsMode" value="remove" /> 제거</label>
+          <div class="row">
+            <input type="number" id="gpsLat" step="any" placeholder="위도 (예: 37.5665)" disabled />
+            <input type="number" id="gpsLon" step="any" placeholder="경도 (예: 126.9780)" disabled />
+          </div>
+        </fieldset>
+
+        <!-- 기기 프로파일 -->
+        <fieldset>
+          <legend>③ 제조사 / 모델</legend>
+          <label><input type="radio" name="devMode" value="keep" checked /> 그대로</label>
+          <label><input type="radio" name="devMode" value="apply" /> 기기 프로파일 적용</label>
+          <div class="row">
+            <select id="devProfile" disabled></select>
+          </div>
+        </fieldset>
+
+        <!-- 식별정보 제거 -->
+        <fieldset>
+          <legend>④ 개인 식별정보</legend>
+          <label><input type="checkbox" id="stripIds" /> 시리얼/소유자명 등 식별 태그 제거</label>
+        </fieldset>
+
+        <button id="editBtn" disabled>메타데이터 편집 실행</button>
+        <div id="status" class="status"></div>
+      </section>
+
+      <!-- 3. 결과 -->
+      <section class="card hidden" id="resultCard">
+        <h2>3. 편집 전 / 후 비교</h2>
+        <div id="actions" class="actions"></div>
+        <table id="diffTable">
+          <thead>
+            <tr><th>항목</th><th>편집 전</th><th>편집 후</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <a id="downloadLink" class="download" download>편집본 다운로드</a>
+        <p class="hint" id="savedPath"></p>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
