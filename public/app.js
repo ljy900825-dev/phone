@@ -107,29 +107,56 @@ $('placeSearch').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); searchPlace(); }
 });
 
-// --- 파일 선택 ---
-$('fileInput').addEventListener('change', (ev) => {
+// --- 파일 선택 (JPEG 그대로 / 아이폰 HEIC 는 브라우저에서 JPEG 변환) ---
+$('fileInput').addEventListener('change', async (ev) => {
   const file = ev.target.files[0];
   if (!file) return;
-  const isJpeg = /jpe?g$/i.test(file.name) || file.type === 'image/jpeg';
-  if (!isJpeg) {
-    setStatus('JPEG 파일만 지원합니다 (PNG 등 미지원).', 'err');
+  const name = file.name || 'photo';
+  const isHeic = /\.(heic|heif)$/i.test(name) || /image\/hei[cf]/i.test(file.type);
+  const isJpeg = /\.jpe?g$/i.test(name) || file.type === 'image/jpeg';
+  if (!isJpeg && !isHeic) {
+    setStatus('JPEG 또는 아이폰 HEIC 사진만 지원합니다 (PNG 등 미지원).', 'err');
     $('editBtn').disabled = true;
     return;
   }
-  selectedFile = file;
+
+  $('editBtn').disabled = true;
+  let workBlob = file;
+  let displayName = name;
+  let converted = false;
+
+  if (isHeic) {
+    if (typeof heic2any === 'undefined') {
+      setStatus('HEIC 변환 모듈을 못 불러왔어요. 인터넷 연결 후 새로고침 해주세요.', 'err');
+      return;
+    }
+    setStatus('아이폰 HEIC 사진 변환 중… (몇 초 걸려요)');
+    try {
+      const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+      workBlob = Array.isArray(out) ? out[0] : out;
+      displayName = name.replace(/\.(heic|heif)$/i, '.jpg');
+      if (!/\.jpe?g$/i.test(displayName)) displayName += '.jpg';
+      converted = true;
+    } catch (e) {
+      setStatus('HEIC 변환 실패: ' + (e && e.message ? e.message : e), 'err');
+      return;
+    }
+  }
+
+  selectedFile = { name: displayName };
   const reader = new FileReader();
   reader.onload = () => {
-    // dataURL "data:image/jpeg;base64,...." 에서 base64 부분만 추출
     selectedBase64 = String(reader.result).split(',')[1];
     $('editBtn').disabled = false;
+    setStatus(converted ? 'HEIC → JPEG 변환 완료 ✓' : '', converted ? 'ok' : '');
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(workBlob);
 
   const info = $('fileInfo');
   info.classList.remove('hidden');
-  info.textContent = `${file.name} · ${(file.size / 1024).toFixed(1)} KB`;
-  setStatus('');
+  info.textContent =
+    `${displayName} · ${(workBlob.size / 1024).toFixed(1)} KB` +
+    (converted ? ' (HEIC→JPEG 변환됨)' : '');
 });
 
 // --- 라디오/체크에 따라 입력칸 enable/disable ---

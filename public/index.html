@@ -22,8 +22,15 @@
       <!-- 1. 파일 선택 -->
       <section class="card">
         <h2>1. 사진 선택</h2>
-        <input type="file" id="fileInput" accept="image/jpeg,.jpg,.jpeg" />
-        <p class="hint">폰으로 찍은 실제 <strong>JPEG</strong> 사진만 지원합니다 (PNG 미지원).</p>
+        <input
+          type="file"
+          id="fileInput"
+          accept="image/jpeg,image/heic,image/heif,.jpg,.jpeg,.heic,.heif"
+        />
+        <p class="hint">
+          갤럭시 <strong>JPEG</strong> · 아이폰 <strong>HEIC</strong> 모두 지원합니다.
+          아이폰 HEIC는 올릴 때 자동으로 JPEG로 변환돼요. (PNG 미지원)
+        </p>
         <div id="fileInfo" class="file-info hidden"></div>
       </section>
 
@@ -99,6 +106,8 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+    <!-- 아이폰 HEIC → JPEG 변환 (브라우저에서 처리) -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>
